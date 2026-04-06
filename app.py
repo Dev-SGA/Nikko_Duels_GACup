@@ -22,19 +22,19 @@ st.caption("Click on the icons on the pitch to inspect the corresponding event."
 # ==========================
 duel_matches_data = {
     "Vs San Jose": [
-        ("OFFENSIVE DUEL WON", 58.01, 22.88, "videos/D2 - SJ"), 
-        ("OFFENSIVE DUEL LOST", 83.61, 38.17, "videos/D1 - SJ"),
-        ("OFFENSIVE DUEL LOST", 91.25, 77.07, "videos/D3 - SJ"), 
+        ("OFFENSIVE DUEL WON", 58.01, 22.88, "videos/D2 - SJ.mp4"), 
+        ("OFFENSIVE DUEL LOST", 83.61, 38.17, "videos/D1 - SJ.mp4"),
+        ("OFFENSIVE DUEL LOST", 91.25, 77.07, "videos/D3 - SJ.mp4"), 
     ],
     "Vs Copehagen": [
-        ("OFFENSIVE DUEL LOST", 60.50, 13.90, "videos/D2 - CP"), 
-        ("OFFENSIVE DUEL LOST", 97.07, 26.20, "videos/D1 - CP"),
+        ("OFFENSIVE DUEL LOST", 60.50, 13.90, "videos/D2 - CP.mp4"), 
+        ("OFFENSIVE DUEL LOST", 97.07, 26.20, "videos/D1 - CP.mp4"),
     ],
     "Vs Sporting": [
-        ("OFFENSIVE DUEL WON", 75.79, 29.69, "videos/D3 - SP"),
-        ("OFFENSIVE DUEL WON", 75.46, 24.21, "videos/D2 - SP"), 
-        ("OFFENSIVE DUEL LOST", 41.38, 9.75, "videos/D1 - SP"), 
-        ("OFFENSIVE DUEL LOST", 89.26, 12.74, "videos/D4 - SP"),
+        ("OFFENSIVE DUEL WON", 75.79, 29.69, "videos/D3 - SP.mp4"),
+        ("OFFENSIVE DUEL WON", 75.46, 24.21, "videos/D2 - SP.mp4"), 
+        ("OFFENSIVE DUEL LOST", 41.38, 9.75, "videos/D1 - SP.mp4"), 
+        ("OFFENSIVE DUEL LOST", 89.26, 12.74, "videos/D4 - SP.mp4"),
     ],
 }
 
