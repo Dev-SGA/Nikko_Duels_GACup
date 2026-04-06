@@ -87,7 +87,6 @@ for match_name, events in touches_matches_data.items():
     df_touch["number"] = np.arange(1, len(df_touch) + 1)
     touch_dfs_by_match[match_name] = df_touch
 
-# Combined data
 df_duels_all = pd.concat(duel_dfs_by_match.values(), ignore_index=True)
 duel_full_data = {"All Games": df_duels_all}
 duel_full_data.update(duel_dfs_by_match)
@@ -148,16 +147,6 @@ def compute_stats(df: pd.DataFrame) -> dict:
     off_wins = off_duels[is_won].shape[0]
     off_rate = (off_wins / off_total * 100) if off_total > 0 else 0
 
-    def_duels = df[is_defensive & is_duel]
-    def_total = len(def_duels)
-    def_wins = def_duels[is_won].shape[0]
-    def_rate = (def_wins / def_total * 100) if def_total > 0 else 0
-
-    aerial_duels = df[df["type"].str.contains("AERIAL", case=False, na=False)]
-    aerial_total = len(aerial_duels)
-    aerial_wins = aerial_duels[is_won].shape[0]
-    aerial_rate = (aerial_wins / aerial_total * 100) if aerial_total > 0 else 0
-
     left_mask = df["y"] < 26.6
     left_duels = df[left_mask & is_duel]
     left_total = len(left_duels)
@@ -192,12 +181,6 @@ def compute_stats(df: pd.DataFrame) -> dict:
         "off_total": off_total,
         "off_wins": off_wins,
         "off_rate": off_rate,
-        "def_total": def_total,
-        "def_wins": def_wins,
-        "def_rate": def_rate,
-        "aerial_total": aerial_total,
-        "aerial_wins": aerial_wins,
-        "aerial_rate": aerial_rate,
         "left_total": left_total,
         "left_wins": left_wins,
         "left_rate": left_rate,
@@ -214,7 +197,7 @@ def compute_stats(df: pd.DataFrame) -> dict:
     }
 
 # ==========================
-# Sidebar Configuration
+# Sidebar
 # ==========================
 st.sidebar.header("Filter Configuration")
 selected_match = st.sidebar.radio("Select a match", list(duel_full_data.keys()), index=0)
@@ -231,7 +214,7 @@ st.sidebar.divider()
 st.sidebar.caption("The duel map is filtered by the selected options above.")
 
 # ==========================
-# Filter Duel Data
+# Filter Data
 # ==========================
 df_duels = duel_full_data[selected_match].copy()
 
@@ -249,47 +232,47 @@ if not all(x in filter_duel_type for x in ["Offensive", "Defensive", "Aerial", "
 
     df_duels = df_duels[mask]
 
-stats = compute_stats(duel_full_data[selected_match])
 df_touches = touch_full_data[selected_match].copy()
+stats = compute_stats(duel_full_data[selected_match])
 
 # ==========================
-# Duel Map + Event Details
+# Top Row: Duel Map + Touch Heatmap
 # ==========================
-col_map, col_vid = st.columns([1, 1])
+col_left, col_right = st.columns(2)
 
-with col_map:
+with col_left:
     st.subheader("Interactive Duel Map")
 
-    pitch = Pitch(
+    pitch_duel = Pitch(
         pitch_type="statsbomb",
         pitch_color="#f8f8f8",
         line_color="#4a4a4a"
     )
-    fig, ax = pitch.draw(figsize=(10, 7))
+    fig_duel, ax_duel = pitch_duel.draw(figsize=(8, 5.6))
 
     for _, row in df_duels.iterrows():
         has_vid = has_video_value(row["video"])
         marker, color, size, lw = get_style(row["type"], has_vid)
         edge_color = "black" if has_vid else "none"
 
-        pitch.scatter(
+        pitch_duel.scatter(
             row["x"], row["y"],
             marker=marker,
             s=size,
             color=color,
             edgecolors=edge_color,
             linewidths=lw,
-            ax=ax,
+            ax=ax_duel,
             zorder=3
         )
 
-    ax.annotate(
+    ax_duel.annotate(
         "",
         xy=(70, 83),
         xytext=(50, 83),
         arrowprops=dict(arrowstyle="->", color="#4a4a4a", lw=1.5)
     )
-    ax.text(
+    ax_duel.text(
         60, 86,
         "Attack Direction",
         ha="center",
@@ -320,7 +303,7 @@ with col_map:
         ),
     ]
 
-    legend = ax.legend(
+    legend = ax_duel.legend(
         handles=legend_elements,
         loc="upper left",
         bbox_to_anchor=(0.01, 0.99),
@@ -342,7 +325,66 @@ with col_map:
     img_obj = Image.open(buf)
 
     click = streamlit_image_coordinates(img_obj, width=700)
+    plt.close(fig_duel)
 
+with col_right:
+    st.subheader("Touch Heatmap")
+
+    pitch_hm = Pitch(
+        pitch_type="statsbomb",
+        pitch_color="#6BB36B",
+        line_color="white"
+    )
+    fig_hm, ax_hm = pitch_hm.draw(figsize=(8, 5.6))
+
+    if not df_touches.empty:
+        pitch_hm.kdeplot(
+            df_touches["x"],
+            df_touches["y"],
+            ax=ax_hm,
+            cmap="Reds",
+            shade=True,
+            levels=100,
+            alpha=0.7
+        )
+
+        pitch_hm.scatter(
+            df_touches["x"],
+            df_touches["y"],
+            ax=ax_hm,
+            color="black",
+            s=18,
+            alpha=0.65,
+            zorder=3
+        )
+
+    ax_hm.set_title(f"Touch Heatmap - {selected_match}", fontsize=12)
+
+    arrow = FancyArrowPatch(
+        (0.45, 0.05), (0.55, 0.05),
+        transform=fig_hm.transFigure,
+        arrowstyle="-|>",
+        mutation_scale=15,
+        linewidth=2,
+        color="#333333"
+    )
+    fig_hm.patches.append(arrow)
+
+    fig_hm.text(
+        0.5, 0.03,
+        "Attack Direction",
+        ha="center",
+        va="center",
+        fontsize=9,
+        color="#333333"
+    )
+
+    st.pyplot(fig_hm, use_container_width=False)
+    plt.close(fig_hm)
+
+# ==========================
+# Click Interaction
+# ==========================
 selected_event = None
 
 if click is not None:
@@ -353,7 +395,7 @@ if click is not None:
     pixel_y = click["y"] * (real_h / disp_h)
 
     mpl_pixel_y = real_h - pixel_y
-    coords = ax.transData.inverted().transform((pixel_x, mpl_pixel_y))
+    coords = ax_duel.transData.inverted().transform((pixel_x, mpl_pixel_y))
     field_x, field_y = coords[0], coords[1]
 
     df_sel = df_duels.copy()
@@ -365,7 +407,14 @@ if click is not None:
     if not candidates.empty:
         selected_event = candidates.loc[candidates["dist"].idxmin()]
 
-with col_vid:
+# ==========================
+# Bottom Row: Event Details + Statistics
+# ==========================
+st.divider()
+
+col_bottom_left, col_bottom_right = st.columns(2)
+
+with col_bottom_left:
     st.subheader("Event Details")
 
     if selected_event is not None:
@@ -380,9 +429,9 @@ with col_vid:
         else:
             st.warning("No video footage is available for this event.")
     else:
-        st.info("Select a marker on the pitch to view event details.")
+        st.info("Select a marker on the duel map to view event details.")
 
-    st.divider()
+with col_bottom_right:
     st.subheader("Performance Statistics")
 
     c1, c2, c3 = st.columns(3)
@@ -392,68 +441,32 @@ with col_vid:
         f"{stats['duel_rate']:.1f}% Success"
     )
     c2.metric(
-        "Duels in Final Third",
-        f"{stats['final_third_wins']}/{stats['final_third_total']}",
-        f"{stats['final_third_rate']:.1f}% Success"
+        "Offensive Duels",
+        f"{stats['off_wins']}/{stats['off_total']}",
+        f"{stats['off_rate']:.1f}% Success"
     )
     c3.metric("Fouls Suffered", stats["fouls"])
 
-# ==========================
-# Touch Heatmap
-# ==========================
-st.divider()
-st.subheader("Touch Heatmap")
+    st.divider()
 
-pitch_hm = Pitch(
-    pitch_type="statsbomb",
-    pitch_color="#6BB36B",
-    line_color="white"
-)
-
-# Same size as duel map
-fig_hm, ax_hm = pitch_hm.draw(figsize=(10, 7))
-
-if not df_touches.empty:
-    pitch_hm.kdeplot(
-        df_touches["x"],
-        df_touches["y"],
-        ax=ax_hm,
-        cmap="Reds",
-        shade=True,
-        levels=100,
-        alpha=0.7
+    d1, d2, d3, d4 = st.columns(4)
+    d1.metric(
+        "Left Corridor",
+        f"{stats['left_wins']}/{stats['left_total']}",
+        f"{stats['left_rate']:.1f}%"
     )
-
-    pitch_hm.scatter(
-        df_touches["x"],
-        df_touches["y"],
-        ax=ax_hm,
-        color="black",
-        s=18,
-        alpha=0.65,
-        zorder=3
+    d2.metric(
+        "Central Corridor",
+        f"{stats['central_wins']}/{stats['central_total']}",
+        f"{stats['central_rate']:.1f}%"
     )
-
-ax_hm.set_title(f"Touch Heatmap - {selected_match}", fontsize=14)
-
-arrow = FancyArrowPatch(
-    (0.45, 0.05), (0.55, 0.05),
-    transform=fig_hm.transFigure,
-    arrowstyle="-|>",
-    mutation_scale=15,
-    linewidth=2,
-    color="#333333"
-)
-fig_hm.patches.append(arrow)
-
-fig_hm.text(
-    0.5, 0.03,
-    "Attack Direction",
-    ha="center",
-    va="center",
-    fontsize=10,
-    color="#333333"
-)
-
-st.pyplot(fig_hm, use_container_width=False)
-plt.close(fig_hm)
+    d3.metric(
+        "Right Corridor",
+        f"{stats['right_wins']}/{stats['right_total']}",
+        f"{stats['right_rate']:.1f}%"
+    )
+    d4.metric(
+        "Final Third",
+        f"{stats['final_third_wins']}/{stats['final_third_total']}",
+        f"{stats['final_third_rate']:.1f}%"
+    )
