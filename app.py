@@ -22,18 +22,18 @@ st.caption("Click on the icons on the pitch to inspect the corresponding event."
 # ==========================
 duel_matches_data = {
     "Vs San Jose": [
-        ("OFFENSIVE DUEL WON", 58.01, 22.88, "videos/D2 - SJ.mp4"), 
+        ("OFFENSIVE DUEL WON", 58.01, 22.88, "videos/D2 - SJ.mp4"),
         ("OFFENSIVE DUEL LOST", 83.61, 38.17, "videos/D1 - SJ.mp4"),
-        ("OFFENSIVE DUEL LOST", 91.25, 77.07, "videos/D3 - SJ.mp4"), 
+        ("OFFENSIVE DUEL LOST", 91.25, 77.07, "videos/D3 - SJ.mp4"),
     ],
     "Vs Copehagen": [
-        ("OFFENSIVE DUEL LOST", 60.50, 13.90, "videos/D2 - CP.mp4"), 
+        ("OFFENSIVE DUEL LOST", 60.50, 13.90, "videos/D2 - CP.mp4"),
         ("OFFENSIVE DUEL LOST", 97.07, 26.20, "videos/D1 - CP.mp4"),
     ],
     "Vs Sporting": [
         ("OFFENSIVE DUEL WON", 75.79, 29.69, "videos/D3 - SP.mp4"),
-        ("OFFENSIVE DUEL WON", 75.46, 24.21, "videos/D2 - SP.mp4"), 
-        ("OFFENSIVE DUEL LOST", 41.38, 9.75, "videos/D1 - SP.mp4"), 
+        ("OFFENSIVE DUEL WON", 75.46, 24.21, "videos/D2 - SP.mp4"),
+        ("OFFENSIVE DUEL LOST", 41.38, 9.75, "videos/D1 - SP.mp4"),
         ("OFFENSIVE DUEL LOST", 89.26, 12.74, "videos/D4 - SP.mp4"),
     ],
 }
@@ -135,11 +135,11 @@ def compute_stats(df: pd.DataFrame) -> dict:
     is_duel = df["type"].str.contains("DUEL|AERIAL", case=False, na=False)
     is_won = df["type"].str.contains("WON", case=False, na=False)
     is_offensive = df["type"].str.contains("OFFENSIVE", case=False, na=False)
-    is_defensive = df["type"].str.contains("DEFENSIVE", case=False, na=False)
 
     all_duels = df[is_duel]
     total_duels = len(all_duels)
     won_duels = all_duels[is_won].shape[0]
+    lost_duels = total_duels - won_duels
     duel_rate = (won_duels / total_duels * 100) if total_duels > 0 else 0
 
     off_duels = df[is_offensive & is_duel]
@@ -147,28 +147,11 @@ def compute_stats(df: pd.DataFrame) -> dict:
     off_wins = off_duels[is_won].shape[0]
     off_rate = (off_wins / off_total * 100) if off_total > 0 else 0
 
-    left_mask = df["y"] < 26.6
-    left_duels = df[left_mask & is_duel]
-    left_total = len(left_duels)
-    left_wins = left_duels[is_won].shape[0]
-    left_rate = (left_wins / left_total * 100) if left_total > 0 else 0
-
-    central_mask = (df["y"] >= 26.6) & (df["y"] <= 53.3)
-    central_duels = df[central_mask & is_duel]
-    central_total = len(central_duels)
-    central_wins = central_duels[is_won].shape[0]
-    central_rate = (central_wins / central_total * 100) if central_total > 0 else 0
-
-    right_mask = df["y"] > 53.3
-    right_duels = df[right_mask & is_duel]
-    right_total = len(right_duels)
-    right_wins = right_duels[is_won].shape[0]
-    right_rate = (right_wins / right_total * 100) if right_total > 0 else 0
-
     final_third_mask = df["x"] > 80
     final_third_duels = df[final_third_mask & is_duel]
     final_third_total = len(final_third_duels)
     final_third_wins = final_third_duels[is_won].shape[0]
+    final_third_lost = final_third_total - final_third_wins
     final_third_rate = (final_third_wins / final_third_total * 100) if final_third_total > 0 else 0
 
     fouls = len(df[df["type"].str.contains("FOULED", case=False, na=False)])
@@ -177,21 +160,14 @@ def compute_stats(df: pd.DataFrame) -> dict:
         "total": total,
         "duel_total": total_duels,
         "duel_wins": won_duels,
+        "duel_lost": lost_duels,
         "duel_rate": duel_rate,
         "off_total": off_total,
         "off_wins": off_wins,
         "off_rate": off_rate,
-        "left_total": left_total,
-        "left_wins": left_wins,
-        "left_rate": left_rate,
-        "central_total": central_total,
-        "central_wins": central_wins,
-        "central_rate": central_rate,
-        "right_total": right_total,
-        "right_wins": right_wins,
-        "right_rate": right_rate,
         "final_third_total": final_third_total,
         "final_third_wins": final_third_wins,
+        "final_third_lost": final_third_lost,
         "final_third_rate": final_third_rate,
         "fouls": fouls,
     }
@@ -434,39 +410,20 @@ with col_bottom_left:
 with col_bottom_right:
     st.subheader("Performance Statistics")
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric(
-        "Overall Duels",
-        f"{stats['duel_wins']}/{stats['duel_total']}",
-        f"{stats['duel_rate']:.1f}% Success"
-    )
-    c2.metric(
-        "Offensive Duels",
-        f"{stats['off_wins']}/{stats['off_total']}",
-        f"{stats['off_rate']:.1f}% Success"
-    )
-    c3.metric("Fouls Suffered", stats["fouls"])
+    # ── Overall Duels ──
+    st.markdown("**Overall Duels**")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Total", stats["duel_total"])
+    c2.metric("Won", stats["duel_wins"])
+    c3.metric("Lost", stats["duel_lost"])
+    c4.metric("Success %", f"{stats['duel_rate']:.1f}%")
 
     st.divider()
 
-    d1, d2, d3, d4 = st.columns(4)
-    d1.metric(
-        "Left Corridor",
-        f"{stats['left_wins']}/{stats['left_total']}",
-        f"{stats['left_rate']:.1f}%"
-    )
-    d2.metric(
-        "Central Corridor",
-        f"{stats['central_wins']}/{stats['central_total']}",
-        f"{stats['central_rate']:.1f}%"
-    )
-    d3.metric(
-        "Right Corridor",
-        f"{stats['right_wins']}/{stats['right_total']}",
-        f"{stats['right_rate']:.1f}%"
-    )
-    d4.metric(
-        "Final Third",
-        f"{stats['final_third_wins']}/{stats['final_third_total']}",
-        f"{stats['final_third_rate']:.1f}%"
-    )
+    # ── Final Third Duels ──
+    st.markdown("**Final Third Duels**")
+    f1, f2, f3, f4 = st.columns(4)
+    f1.metric("Total", stats["final_third_total"])
+    f2.metric("Won", stats["final_third_wins"])
+    f3.metric("Lost", stats["final_third_lost"])
+    f4.metric("Success %", f"{stats['final_third_rate']:.1f}%")
