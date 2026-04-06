@@ -22,18 +22,18 @@ st.caption("Click on the icons on the pitch to inspect the corresponding event."
 # ==========================
 duel_matches_data = {
     "Vs San Jose": [
-        ("OFFENSIVE DUEL WON", 58.01, 22.88, None),
-        ("OFFENSIVE DUEL LOST", 83.61, 38.17, None),
-        ("OFFENSIVE DUEL LOST", 91.25, 77.07, None),
+        ("OFFENSIVE DUEL WON", 58.01, 22.88, None), """ D2 """
+        ("OFFENSIVE DUEL LOST", 83.61, 38.17, None), """ D1 """
+        ("OFFENSIVE DUEL LOST", 91.25, 77.07, None), """ D3 """
     ],
     "Vs Copehagen": [
-        ("OFFENSIVE DUEL LOST", 60.50, 13.90, None),
-        ("OFFENSIVE DUEL LOST", 97.07, 26.20, None),
+        ("OFFENSIVE DUEL LOST", 60.50, 13.90, None), """ D2 """
+        ("OFFENSIVE DUEL LOST", 97.07, 26.20, None), """ D1 """
     ],
     "Vs Sporting": [
-        ("OFFENSIVE DUEL WON", 75.79, 29.69, None),
-        ("OFFENSIVE DUEL WON", 75.46, 24.21, None),
-        ("OFFENSIVE DUEL LOST", 41.38, 9.75, None),
+        ("OFFENSIVE DUEL WON", 75.79, 29.69, None), """3"""
+        ("OFFENSIVE DUEL WON", 75.46, 24.21, None), """2"""
+        ("OFFENSIVE DUEL LOST", 41.38, 9.75, None), """1"""
         ("OFFENSIVE DUEL LOST", 89.26, 12.74, None),
     ],
 }
