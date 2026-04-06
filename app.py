@@ -249,10 +249,7 @@ if not all(x in filter_duel_type for x in ["Offensive", "Defensive", "Aerial", "
 
     df_duels = df_duels[mask]
 
-# Match stats always use complete selected match duel data
 stats = compute_stats(duel_full_data[selected_match])
-
-# Touch data for selected match
 df_touches = touch_full_data[selected_match].copy()
 
 # ==========================
@@ -413,6 +410,7 @@ pitch_hm = Pitch(
     line_color="white"
 )
 
+# Same size as duel map
 fig_hm, ax_hm = pitch_hm.draw(figsize=(10, 7))
 
 if not df_touches.empty:
@@ -457,5 +455,5 @@ fig_hm.text(
     color="#333333"
 )
 
-st.pyplot(fig_hm)
+st.pyplot(fig_hm, use_container_width=False)
 plt.close(fig_hm)
