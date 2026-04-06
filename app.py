@@ -7,6 +7,7 @@ from io import BytesIO
 import numpy as np
 from PIL import Image
 from matplotlib.lines import Line2D
+from matplotlib.patches import FancyArrowPatch
 
 # ==========================
 # Page Configuration
@@ -17,9 +18,9 @@ st.title("Offensive Duel Map Analysis - Multiple Matches")
 st.caption("Click on the icons on the pitch to inspect the corresponding event.")
 
 # ==========================
-# Data Setup
+# Duel Data
 # ==========================
-matches_data = {
+duel_matches_data = {
     "Vs San Jose": [
         ("OFFENSIVE DUEL WON", 58.01, 22.88, None),
         ("OFFENSIVE DUEL LOST", 83.61, 38.17, None),
@@ -37,67 +38,105 @@ matches_data = {
     ],
 }
 
-# Create DataFrames for each match and combined
-dfs_by_match = {}
-for match_name, events in matches_data.items():
-    df_match = pd.DataFrame(events, columns=["type", "x", "y", "video"])
-    df_match["number"] = np.arange(1, len(df_match) + 1)
-    dfs_by_match[match_name] = df_match
-
-# All games combined
-df_all = pd.concat(dfs_by_match.values(), ignore_index=True)
-full_data = {"All Games": df_all}
-full_data.update(dfs_by_match)
+# ==========================
+# Touch Data
+# ==========================
+touches_matches_data = {
+    "Vs San Jose": [
+        (66.98, 20.72),
+        (85.10, 38.84),
+        (93.08, 31.69),
+        (105.05, 31.69),
+        (108.71, 36.18),
+        (84.10, 74.08),
+    ],
+    "Vs Copehagen": [
+        (57.67, 13.74),
+        (97.90, 3.10),
+        (88.59, 19.22),
+        (92.58, 28.36),
+        (94.41, 25.37),
+        (86.60, 49.31),
+        (84.60, 57.79),
+        (68.48, 66.10),
+        (93.25, 68.43),
+        (98.57, 74.74),
+    ],
+    "Vs Sporting": [
+        (49.86, 7.75),
+        (58.17, 15.56),
+        (54.18, 25.70),
+        (70.47, 34.68),
+        (80.28, 17.23),
+        (92.75, 11.41),
+    ],
+}
 
 # ==========================
-# Styling
+# Create DataFrames
+# ==========================
+duel_dfs_by_match = {}
+for match_name, events in duel_matches_data.items():
+    df_match = pd.DataFrame(events, columns=["type", "x", "y", "video"])
+    df_match["number"] = np.arange(1, len(df_match) + 1)
+    duel_dfs_by_match[match_name] = df_match
+
+touch_dfs_by_match = {}
+for match_name, events in touches_matches_data.items():
+    df_touch = pd.DataFrame(events, columns=["x", "y"])
+    df_touch["number"] = np.arange(1, len(df_touch) + 1)
+    touch_dfs_by_match[match_name] = df_touch
+
+# Combined data
+df_duels_all = pd.concat(duel_dfs_by_match.values(), ignore_index=True)
+duel_full_data = {"All Games": df_duels_all}
+duel_full_data.update(duel_dfs_by_match)
+
+df_touches_all = pd.concat(touch_dfs_by_match.values(), ignore_index=True)
+touch_full_data = {"All Games": df_touches_all}
+touch_full_data.update(touch_dfs_by_match)
+
+# ==========================
+# Helpers
 # ==========================
 def has_video_value(v) -> bool:
     return pd.notna(v) and str(v).strip() != ""
 
 def get_style(event_type, has_video):
-    """Returns marker, color (rgba), size, and linewidth based on event type"""
     event_type = event_type.upper()
 
-    # Offensive duels
     if "OFFENSIVE" in event_type:
         if "WON" in event_type:
-            return 'o', (0.10, 0.85, 0.10, 0.95), 110, 0.8
+            return "o", (0.10, 0.85, 0.10, 0.95), 110, 0.8
         if "LOST" in event_type:
             alpha = 0.95 if has_video else 0.75
-            return 'x', (0.95, 0.15, 0.15, alpha), 120, 3.0
+            return "x", (0.95, 0.15, 0.15, alpha), 120, 3.0
 
-    # Defensive duels
     if "DEFENSIVE" in event_type:
         if "WON" in event_type:
-            return 's', (0.00, 0.60, 0.00, 0.90), 110, 0.8
+            return "s", (0.00, 0.60, 0.00, 0.90), 110, 0.8
         if "LOST" in event_type:
             alpha = 0.90 if has_video else 0.65
-            return 'D', (0.70, 0.00, 0.00, alpha), 110, 2.5
+            return "D", (0.70, 0.00, 0.00, alpha), 110, 2.5
 
-    # Aerial duels
     if "AERIAL" in event_type:
         if "WON" in event_type:
-            return '^', (0.20, 0.50, 0.95, 0.90), 120, 0.8
+            return "^", (0.20, 0.50, 0.95, 0.90), 120, 0.8
         if "LOST" in event_type:
-            return 'v', (0.55, 0.20, 0.85, 0.85), 120, 0.8
+            return "v", (0.55, 0.20, 0.85, 0.85), 120, 0.8
 
-    # Other events
     if "FOULED" in event_type:
-        return 'P', (1.00, 0.80, 0.00, 1.00), 130, 0.8
+        return "P", (1.00, 0.80, 0.00, 1.00), 130, 0.8
 
-    return 'o', (0.5, 0.5, 0.5, 0.8), 90, 0.5
+    return "o", (0.5, 0.5, 0.5, 0.8), 90, 0.5
 
-# ==========================
-# Stats
-# ==========================
 def compute_stats(df: pd.DataFrame) -> dict:
     total = len(df)
 
-    is_duel = df['type'].str.contains('DUEL|AERIAL', case=False, na=False)
-    is_won = df['type'].str.contains('WON', case=False, na=False)
-    is_offensive = df['type'].str.contains('OFFENSIVE', case=False, na=False)
-    is_defensive = df['type'].str.contains('DEFENSIVE', case=False, na=False)
+    is_duel = df["type"].str.contains("DUEL|AERIAL", case=False, na=False)
+    is_won = df["type"].str.contains("WON", case=False, na=False)
+    is_offensive = df["type"].str.contains("OFFENSIVE", case=False, na=False)
+    is_defensive = df["type"].str.contains("DEFENSIVE", case=False, na=False)
 
     all_duels = df[is_duel]
     total_duels = len(all_duels)
@@ -114,36 +153,36 @@ def compute_stats(df: pd.DataFrame) -> dict:
     def_wins = def_duels[is_won].shape[0]
     def_rate = (def_wins / def_total * 100) if def_total > 0 else 0
 
-    aerial_duels = df[df['type'].str.contains('AERIAL', case=False, na=False)]
+    aerial_duels = df[df["type"].str.contains("AERIAL", case=False, na=False)]
     aerial_total = len(aerial_duels)
     aerial_wins = aerial_duels[is_won].shape[0]
     aerial_rate = (aerial_wins / aerial_total * 100) if aerial_total > 0 else 0
 
-    left_mask = df['y'] < 26.6
+    left_mask = df["y"] < 26.6
     left_duels = df[left_mask & is_duel]
     left_total = len(left_duels)
     left_wins = left_duels[is_won].shape[0]
     left_rate = (left_wins / left_total * 100) if left_total > 0 else 0
 
-    central_mask = (df['y'] >= 26.6) & (df['y'] <= 53.3)
+    central_mask = (df["y"] >= 26.6) & (df["y"] <= 53.3)
     central_duels = df[central_mask & is_duel]
     central_total = len(central_duels)
     central_wins = central_duels[is_won].shape[0]
     central_rate = (central_wins / central_total * 100) if central_total > 0 else 0
 
-    right_mask = df['y'] > 53.3
+    right_mask = df["y"] > 53.3
     right_duels = df[right_mask & is_duel]
     right_total = len(right_duels)
     right_wins = right_duels[is_won].shape[0]
     right_rate = (right_wins / right_total * 100) if right_total > 0 else 0
 
-    final_third_mask = df['x'] > 80
+    final_third_mask = df["x"] > 80
     final_third_duels = df[final_third_mask & is_duel]
     final_third_total = len(final_third_duels)
     final_third_wins = final_third_duels[is_won].shape[0]
     final_third_rate = (final_third_wins / final_third_total * 100) if final_third_total > 0 else 0
 
-    fouls = len(df[df['type'].str.contains('FOULED', case=False, na=False)])
+    fouls = len(df[df["type"].str.contains("FOULED", case=False, na=False)])
 
     return {
         "total": total,
@@ -178,7 +217,7 @@ def compute_stats(df: pd.DataFrame) -> dict:
 # Sidebar Configuration
 # ==========================
 st.sidebar.header("Filter Configuration")
-selected_match = st.sidebar.radio("Select a match", list(full_data.keys()), index=0)
+selected_match = st.sidebar.radio("Select a match", list(duel_full_data.keys()), index=0)
 
 st.sidebar.divider()
 
@@ -189,52 +228,55 @@ filter_duel_type = st.sidebar.multiselect(
 )
 
 st.sidebar.divider()
-st.sidebar.caption("The pitch map is filtered by the selected options above.")
-
-# Get selected data
-df = full_data[selected_match].copy()
-
-# Apply duel type filter
-if not all(x in filter_duel_type for x in ["Offensive", "Defensive", "Aerial", "Other"]):
-    mask = pd.Series([False] * len(df), index=df.index)
-
-    if "Offensive" in filter_duel_type:
-        mask |= df['type'].str.contains('OFFENSIVE', case=False, na=False)
-    if "Defensive" in filter_duel_type:
-        mask |= df['type'].str.contains('DEFENSIVE', case=False, na=False)
-    if "Aerial" in filter_duel_type:
-        mask |= df['type'].str.contains('AERIAL', case=False, na=False)
-    if "Other" in filter_duel_type:
-        mask |= ~df['type'].str.contains('OFFENSIVE|DEFENSIVE|AERIAL', case=False, na=False)
-
-    df = df[mask]
-
-# Compute stats from the selected full match data
-stats = compute_stats(full_data[selected_match])
+st.sidebar.caption("The duel map is filtered by the selected options above.")
 
 # ==========================
-# Main Layout
+# Filter Duel Data
+# ==========================
+df_duels = duel_full_data[selected_match].copy()
+
+if not all(x in filter_duel_type for x in ["Offensive", "Defensive", "Aerial", "Other"]):
+    mask = pd.Series([False] * len(df_duels), index=df_duels.index)
+
+    if "Offensive" in filter_duel_type:
+        mask |= df_duels["type"].str.contains("OFFENSIVE", case=False, na=False)
+    if "Defensive" in filter_duel_type:
+        mask |= df_duels["type"].str.contains("DEFENSIVE", case=False, na=False)
+    if "Aerial" in filter_duel_type:
+        mask |= df_duels["type"].str.contains("AERIAL", case=False, na=False)
+    if "Other" in filter_duel_type:
+        mask |= ~df_duels["type"].str.contains("OFFENSIVE|DEFENSIVE|AERIAL", case=False, na=False)
+
+    df_duels = df_duels[mask]
+
+# Match stats always use complete selected match duel data
+stats = compute_stats(duel_full_data[selected_match])
+
+# Touch data for selected match
+df_touches = touch_full_data[selected_match].copy()
+
+# ==========================
+# Duel Map + Event Details
 # ==========================
 col_map, col_vid = st.columns([1, 1])
 
 with col_map:
-    st.subheader("Interactive Pitch Map")
+    st.subheader("Interactive Duel Map")
 
     pitch = Pitch(
-        pitch_type='statsbomb',
-        pitch_color='#f8f8f8',
-        line_color='#4a4a4a'
+        pitch_type="statsbomb",
+        pitch_color="#f8f8f8",
+        line_color="#4a4a4a"
     )
     fig, ax = pitch.draw(figsize=(10, 7))
 
-    for _, row in df.iterrows():
+    for _, row in df_duels.iterrows():
         has_vid = has_video_value(row["video"])
         marker, color, size, lw = get_style(row["type"], has_vid)
-
-        edge_color = 'black' if has_vid else 'none'
+        edge_color = "black" if has_vid else "none"
 
         pitch.scatter(
-            row.x, row.y,
+            row["x"], row["y"],
             marker=marker,
             s=size,
             color=color,
@@ -244,72 +286,66 @@ with col_map:
             zorder=3
         )
 
-    # Attack Arrow
     ax.annotate(
-        '',
+        "",
         xy=(70, 83),
         xytext=(50, 83),
-        arrowprops=dict(arrowstyle='->', color='#4a4a4a', lw=1.5)
+        arrowprops=dict(arrowstyle="->", color="#4a4a4a", lw=1.5)
     )
     ax.text(
         60, 86,
         "Attack Direction",
-        ha='center',
-        va='center',
+        ha="center",
+        va="center",
         fontsize=9,
-        color='#4a4a4a',
-        fontweight='bold'
+        color="#4a4a4a",
+        fontweight="bold"
     )
 
-    # Legend
     legend_elements = [
         Line2D(
             [0], [0],
-            marker='o',
-            color='w',
-            label='Offensive Duel Won',
+            marker="o",
+            color="w",
+            label="Offensive Duel Won",
             markerfacecolor=(0.10, 0.85, 0.10, 0.95),
             markersize=10,
-            linestyle='None'
+            linestyle="None"
         ),
         Line2D(
             [0], [0],
-            marker='x',
+            marker="x",
             color=(0.95, 0.15, 0.15, 0.95),
-            label='Offensive Duel Lost',
+            label="Offensive Duel Lost",
             markersize=10,
             markeredgewidth=2.5,
-            linestyle='None'
+            linestyle="None"
         ),
     ]
 
     legend = ax.legend(
         handles=legend_elements,
-        loc='upper left',
+        loc="upper left",
         bbox_to_anchor=(0.01, 0.99),
         frameon=True,
-        facecolor='white',
-        edgecolor='#333333',
-        fontsize='small',
+        facecolor="white",
+        edgecolor="#333333",
+        fontsize="small",
         title="Match Events",
-        title_fontsize='medium',
+        title_fontsize="medium",
         labelspacing=1.2,
         borderpad=1.0,
         framealpha=0.95
     )
-    legend.get_title().set_fontweight('bold')
+    legend.get_title().set_fontweight("bold")
 
-    # Convert plot to image for coordinate tracking
     buf = BytesIO()
-    plt.savefig(buf, format="png", dpi=100, bbox_inches='tight')
+    plt.savefig(buf, format="png", dpi=100, bbox_inches="tight")
     buf.seek(0)
     img_obj = Image.open(buf)
 
     click = streamlit_image_coordinates(img_obj, width=700)
 
-# ==========================
-# Interaction Logic
-# ==========================
 selected_event = None
 
 if click is not None:
@@ -323,7 +359,7 @@ if click is not None:
     coords = ax.transData.inverted().transform((pixel_x, mpl_pixel_y))
     field_x, field_y = coords[0], coords[1]
 
-    df_sel = df.copy()
+    df_sel = df_duels.copy()
     df_sel["dist"] = np.sqrt((df_sel["x"] - field_x) ** 2 + (df_sel["y"] - field_y) ** 2)
 
     RADIUS = 5
@@ -332,9 +368,6 @@ if click is not None:
     if not candidates.empty:
         selected_event = candidates.loc[candidates["dist"].idxmin()]
 
-# ==========================
-# Video Display & Stats
-# ==========================
 with col_vid:
     st.subheader("Event Details")
 
@@ -355,15 +388,74 @@ with col_vid:
     st.divider()
     st.subheader("Performance Statistics")
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric(
+    c1, c2, c3 = st.columns(3)
+    c1.metric(
         "Overall Duels",
         f"{stats['duel_wins']}/{stats['duel_total']}",
         f"{stats['duel_rate']:.1f}% Success"
     )
-    col2.metric(
+    c2.metric(
         "Duels in Final Third",
         f"{stats['final_third_wins']}/{stats['final_third_total']}",
         f"{stats['final_third_rate']:.1f}% Success"
     )
-    col3.metric("Fouls Suffered", stats["fouls"])
+    c3.metric("Fouls Suffered", stats["fouls"])
+
+# ==========================
+# Touch Heatmap
+# ==========================
+st.divider()
+st.subheader("Touch Heatmap")
+
+pitch_hm = Pitch(
+    pitch_type="statsbomb",
+    pitch_color="#6BB36B",
+    line_color="white"
+)
+
+fig_hm, ax_hm = pitch_hm.draw(figsize=(10, 7))
+
+if not df_touches.empty:
+    pitch_hm.kdeplot(
+        df_touches["x"],
+        df_touches["y"],
+        ax=ax_hm,
+        cmap="Reds",
+        shade=True,
+        levels=100,
+        alpha=0.7
+    )
+
+    pitch_hm.scatter(
+        df_touches["x"],
+        df_touches["y"],
+        ax=ax_hm,
+        color="black",
+        s=18,
+        alpha=0.65,
+        zorder=3
+    )
+
+ax_hm.set_title(f"Touch Heatmap - {selected_match}", fontsize=14)
+
+arrow = FancyArrowPatch(
+    (0.45, 0.05), (0.55, 0.05),
+    transform=fig_hm.transFigure,
+    arrowstyle="-|>",
+    mutation_scale=15,
+    linewidth=2,
+    color="#333333"
+)
+fig_hm.patches.append(arrow)
+
+fig_hm.text(
+    0.5, 0.03,
+    "Attack Direction",
+    ha="center",
+    va="center",
+    fontsize=10,
+    color="#333333"
+)
+
+st.pyplot(fig_hm)
+plt.close(fig_hm)
